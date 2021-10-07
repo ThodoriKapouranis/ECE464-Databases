@@ -8,6 +8,7 @@
 # py -m pytest ./test_part_1.py 
 # to ensure that we're running with python3
 from decimal import Decimal
+from typing import AsyncGenerator
 from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy.sql.elements import or_
 from sqlalchemy.sql.expression import bindparam, select
@@ -205,11 +206,22 @@ def test_q7():
         (8, 59, 'stum', 25),
         (9, 74, 'horatio', 25),
         (9, 88, 'dan', 25),
-        (0, 58, 'rusty', 35),
-        (0, 60, 'jit', 35),
-        (0, 62, 'shaun', 35),
-        (0, 71, 'zorba', 35)
+        (10, 58, 'rusty', 35),
+        (10, 60, 'jit', 35),
+        (10, 62, 'shaun', 35),
+        (10, 71, 'zorba', 35)
     ]
+
+    # Subquery for getting the youngest age of a sailor grouped by the rating
+    yng_per = s.query( Sailors.rating, func.min(Sailors.age).label('min'))\
+                .group_by(Sailors.rating)\
+                .subquery()
+
+    main_query = s.query(Sailors.rating, Sailors.sid, Sailors.sname, Sailors.age)\
+                    .filter(Sailors.rating==yng_per.c.rating, Sailors.age==yng_per.c.min)\
+                    .order_by(Sailors.rating)
+
+    assert expected == main_query.all()
 
 def test_q8():
     expected = [
