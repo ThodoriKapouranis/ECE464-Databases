@@ -130,6 +130,8 @@ def test_q3():
     gob_sailors = s.query(Reservations.sid)\
                     .filter(Reservations.bid==Boats.bid, or_(Boats.color=='green', Boats.color=='blue'))
     
+    # Convert this to a list of ints, because otherwise its tuples.
+    # Tuples dont work with Table.col.in_([...]) filtering
     gob_sailors = [ x[0] for x in gob_sailors.all() ]
     
 
@@ -141,6 +143,19 @@ def test_q3():
 
 def test_q4():
     expected = [(104, 'Clipper', 5)]
+
+    # Scalar for most reservations
+    most_rsvs = s.query(func.count(Reservations.bid))\
+                    .group_by(Reservations.bid)\
+                    .order_by(func.count(Reservations.bid))\
+                    .all()[-1][0]
+
+    main_query = s.query(Reservations.bid, Boats.bname, func.count(Reservations.bid))\
+                    .filter(Reservations.bid==Boats.bid)\
+                    .group_by(Reservations.bid)\
+                    .having(func.count(Reservations.bid)==most_rsvs)
+    
+    assert expected == main_query.all()
 
 def test_q5():
     expected = [
