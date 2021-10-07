@@ -8,8 +8,10 @@
 # py -m pytest ./test_part_1.py 
 # to ensure that we're running with python3
 from sqlalchemy.orm.session import sessionmaker
+from sqlalchemy.sql.expression import bindparam, select
 from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import ForeignKey, PrimaryKeyConstraint
+from sqlalchemy.sql.selectable import Select, subquery
 from sqlalchemy.sql.sqltypes import DateTime, String
 from sqlalchemy.orm import backref, relationship, Query
 from sqlalchemy import create_engine, text, Column, Integer
@@ -17,6 +19,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 # Connect the engine to the existing mysql db
 engine = create_engine("mysql+pymysql://root:123@localhost/sailors", echo=False)
+conn = engine.connect()
 
 Session = sessionmaker(bind = engine)
 s = Session()
@@ -62,8 +65,7 @@ class Reservations(Base):
 
     def __repr__(self):
         return "<Reservations(sid=%s, bid=%s, day=%s)>" % (self.sid, self.bid, self.day)
-
-
+    
 # pytest will go through every function that starts with a "test_" prefix.
 # These functions end with an assertion and will be how pytest knows if
 # something has failed or passed.
@@ -87,13 +89,32 @@ def test_q1():
 
     orm_query = s.query(Boats.bid, Boats.bname, func.count(Reservations.bid))\
                     .filter(Reservations.bid == Boats.bid)\
-                        .group_by(Boats.bid)
+                    .group_by(Boats.bid)
     
     assert expected == orm_query.all()
 
+# List sailors that rsvd every read boat
+# This is probably wrong.... Fix it
 
 def test_q2():
     expected = []
+
+    # Subquery for a column of all Red Boat Bids
+    rbb = s.query(Boats.bid)\
+            .filter(Boats.color=='red')\
+            .subquery()
+
+    # Scalar value for total number of red boats
+    red_count = s.query(func.count(Boats.bid))\
+                    .filter(Boats.color=='red')\
+                    .scalar()
+
+    orm_query = s.query(Sailors.sid, Sailors.sname)\
+                    .filter(Sailors.sid==Reservations.sid, Reservations.bid==rbb.c.bid)\
+                    .group_by(Reservations.bid)\
+                    .having( func.count(Reservations.bid)==red_count)
+    
+    assert expected==orm_query.all()
 
 def test_q3():
     expected = [
