@@ -8,9 +8,10 @@
 # py -m pytest ./test_part_1.py 
 # to ensure that we're running with python3
 from sqlalchemy.orm.session import sessionmaker
+from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import ForeignKey, PrimaryKeyConstraint
 from sqlalchemy.sql.sqltypes import DateTime, String
-from sqlalchemy.orm import backref, relationship
+from sqlalchemy.orm import backref, relationship, Query
 from sqlalchemy import create_engine, text, Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -62,7 +63,13 @@ class Reservations(Base):
     def __repr__(self):
         return "<Reservations(sid=%s, bid=%s, day=%s)>" % (self.sid, self.bid, self.day)
 
-def test_q1():
+
+# pytest will go through every function that starts with a "test_" prefix.
+# These functions end with an assertion and will be how pytest knows if
+# something has failed or passed.
+
+# Each boat, number of times reserved (non-zero)
+def test_q1(): 
     expected = [
                 (101,'Interlake',2),
                 (102,'Interlake',3),
@@ -77,6 +84,12 @@ def test_q1():
                 (111,'Sooney',1),
                 (108,'Driftwood',1),
                 ]
+
+    orm_query = s.query(Boats.bid, Boats.bname, func.count(Reservations.bid))\
+                    .filter(Reservations.bid == Boats.bid)\
+                        .group_by(Boats.bid)
+    
+    assert expected == orm_query.all()
 
 
 def test_q2():
