@@ -252,3 +252,30 @@ def test_q8():
         ('Sooney', 111, 'dan', 88, 1),
         ('Sooney', 112, 'ossola', 61, 1)
     ]
+
+    # Table for counting occurences of Sid and Bid pairs
+    pair_count = s.query(Reservations.sid, Reservations.bid, Boats.bname, func.count(Reservations.bid).label('res'))\
+                    .filter(Reservations.bid==Boats.bid)\
+                    .group_by(Reservations.sid, Boats.bid)\
+                    .subquery()
+    
+    # Table for counting the max reservations a single person has done for each bid
+    max_per_boat = s.query(
+                        pair_count.c.bid, 
+                        func.max(pair_count.c.res).label('maxRes')
+                    ).group_by(pair_count.c.bid)\
+                    .subquery()
+    
+    main_query = s.query( 
+                    pair_count.c.bname, 
+                    pair_count.c.bid, 
+                    Sailors.sname,
+                    Sailors.sid,
+                    pair_count.c.res
+                    ).filter( 
+                        pair_count.c.bid == max_per_boat.c.bid, 
+                        pair_count.c.res == max_per_boat.c.maxRes,
+                        Sailors.sid == pair_count.c.sid
+                    ).order_by(pair_count.c.bid)
+    
+    assert expected == main_query.all()
