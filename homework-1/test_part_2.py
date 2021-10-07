@@ -7,13 +7,14 @@
 # Run this file with 
 # py -m pytest ./test_part_1.py 
 # to ensure that we're running with python3
+from decimal import Decimal
 from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy.sql.elements import or_
 from sqlalchemy.sql.expression import bindparam, select
 from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import ForeignKey, PrimaryKeyConstraint
 from sqlalchemy.sql.selectable import Select, subquery
-from sqlalchemy.sql.sqltypes import DateTime, String
+from sqlalchemy.sql.sqltypes import DECIMAL, DateTime, String
 from sqlalchemy.orm import backref, relationship, Query
 from sqlalchemy import create_engine, text, Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
@@ -185,7 +186,12 @@ def test_q5():
 
 
 def test_q6():
-    expected = [35]
+    expected = 35
+
+    main_query = s.query(func.avg(Sailors.age))\
+                    .filter(Sailors.rating==10)
+
+    assert expected == main_query.all()[0][0] # get the scalar value
 
 def test_q7():
     expected = [
