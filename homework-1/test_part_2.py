@@ -132,7 +132,7 @@ def test_q3():
     
     # Convert this to a list of ints, because otherwise its tuples.
     # Tuples dont work with Table.col.in_([...]) filtering
-    gob_sailors = [ x[0] for x in gob_sailors.all() ]
+    gob_sailors = [ id_tuple[0] for id_tuple in gob_sailors.all() ]
     
 
     main_query = s.query(Sailors.sid, Sailors.sname)\
@@ -159,16 +159,29 @@ def test_q4():
 
 def test_q5():
     expected = [
-        (95,'bob'),
-        (90,'vin'),
-        (85,'art'),
-        (74,'horati'),
-        (71,'zorba'),
-        (60,'jit'),
-        (58,'rusty'),
+        (29,'brutus'),
         (32,'andy'),
-        (29,'brutus')
+        (58,'rusty'),
+        (60,'jit'),
+        (71,'zorba'),
+        (74,'horatio'),
+        (85,'art'),
+        (90,'vin'),
+        (95,'bob')
     ]
+
+    # subquery for Sailors that have reserved at least one red boat 
+    red_sailors = s.query(Sailors.sid)\
+                    .filter(Sailors.sid==Reservations.sid, Reservations.bid==Boats.bid, Boats.color=='red')\
+                    .distinct()
+    
+    red_sailors = [id_tuple[0] for id_tuple in red_sailors]
+
+    main_query = s.query(Sailors.sid, Sailors.sname)\
+                    .filter(~Sailors.sid.in_(red_sailors))\
+                    .order_by(Sailors.sid)
+    
+    assert expected == main_query.all()
 
 
 def test_q6():
