@@ -8,6 +8,7 @@
 # py -m pytest ./test_part_1.py 
 # to ensure that we're running with python3
 from sqlalchemy.orm.session import sessionmaker
+from sqlalchemy.sql.elements import or_
 from sqlalchemy.sql.expression import bindparam, select
 from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import ForeignKey, PrimaryKeyConstraint
@@ -124,6 +125,19 @@ def test_q3():
         (61, 'ossola'),
         (62, 'shaun')
     ]
+
+    # Subquery for sailors that have rsvd Green or Blue boats
+    gob_sailors = s.query(Reservations.sid)\
+                    .filter(Reservations.bid==Boats.bid, or_(Boats.color=='green', Boats.color=='blue'))
+    
+    gob_sailors = [ x[0] for x in gob_sailors.all() ]
+    
+
+    main_query = s.query(Sailors.sid, Sailors.sname)\
+                    .filter(~Reservations.sid.in_(gob_sailors), Sailors.sid==Reservations.sid)\
+                    .distinct()
+
+    assert expected == main_query.all()
 
 def test_q4():
     expected = [(104, 'Clipper', 5)]
