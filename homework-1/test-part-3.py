@@ -8,12 +8,13 @@
 # Boat repair tracker
 # Employee table + dep + salary
 
+from datetime import datetime, timedelta
 from decimal import Decimal
 from sqlalchemy.engine import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.orm.session import sessionmaker
-from sqlalchemy.sql.expression import true
+from sqlalchemy.sql.expression import extract, true
 from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import Column, ForeignKey, PrimaryKeyConstraint
 from sqlalchemy.sql.sqltypes import DECIMAL, DateTime, Integer, String
@@ -111,5 +112,14 @@ def test_q2():
 
     assert expected == orm_query.all()
 
+# Get total repair costs for the October 2000
+def test_q3():
+    expected = [(Decimal('2031.32'),)]
+    orm_query = s.query(func.sum(Repairs.cost))\
+                    .filter(
+                        extract('year', Repairs.day)==2000, 
+                        extract('month', Repairs.day)==10)
 
-test_q2();
+    assert expected == orm_query.all()
+
+test_q3()
