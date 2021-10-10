@@ -14,6 +14,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy.sql.expression import true
+from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import Column, ForeignKey, PrimaryKeyConstraint
 from sqlalchemy.sql.sqltypes import DECIMAL, DateTime, Integer, String
 
@@ -80,5 +81,35 @@ class Repairs(Base):
 
 all_repairs = s.query(Repairs.rid, Repairs.bid, Repairs.day, Repairs.cost)
 
-# Get the boat with the most cost of repairs
+# Get the boat with the most repair costs
+def test_q1():
+    expected = [
+        (101, Decimal('2482.89'))
+    ]
 
+    total_cost = s.query(Repairs.bid, func.sum(Repairs.cost).label("cost"))\
+                    .group_by(Repairs.bid)\
+                    .subquery()
+    
+    max_cost = s.query(func.max(total_cost.c.cost)).scalar_subquery()
+
+    orm_query = s.query(total_cost.c.bid, total_cost.c.cost)\
+                    .filter(total_cost.c.cost==max_cost)
+
+    assert expected == orm_query.all()
+
+# Get boats that have not needed repairs
+def test_q2():
+    expected = [(105,)]
+
+    all_boats = s.query(Boats.bid).distinct().subquery()
+    boats_repaired = s.query(Repairs.bid).distinct()
+    boats_repaired = [bid_tuple[0] for bid_tuple in boats_repaired]
+
+    orm_query = s.query(Boats.bid)\
+                    .filter(~Boats.bid.in_(boats_repaired))
+
+    assert expected == orm_query.all()
+
+
+test_q2();
