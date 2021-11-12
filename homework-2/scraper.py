@@ -35,15 +35,25 @@ def grabDefinitions():
         len = i.find_all(class_="level0").__len__()
         
         if (len == 0):
+            # For some reason, the website decides its a good idea
+            # to seemingly randomly change how it represents definitions
+            # , even if theyre from the same source...
             len = i.find_all(class_="level1").__len__()
-            
+            defs_classes.append("Kejje2") 
+        else:
+            defs_classes.append("Kejje")
+
         defs_lens.append(len)
-        defs_classes.append("Kejje")
 
     for i in soup.find_all(class_="Nwnej"):
         defs.append(i)
         defs_lens.append(i.find_all(class_="nwnejT").__len__()) 
         defs_classes.append("Nwnej")
+
+    for i in soup.find_all(class_="hlt_JMDCT"):
+        defs.append(i)
+        defs_lens.append(i.find_all(class_="jmdctGls").__len__()) 
+        defs_classes.append("hlt_JMDCT")
 
     if (defs_lens != [] ):
         best_index = defs_lens.index( max(defs_lens) )
@@ -61,7 +71,7 @@ def grabDefinitions():
 
     elif (def_class == "Kejje"):
         # Grab all the definitions from this container
-        def_container = def_container.findAll("div", class_="level0")
+        def_container = def_container.findAll("div", class_="lvlBje")
 
         for i in range(def_container.__len__()):
             # Grab all the example sentences 
@@ -166,7 +176,7 @@ for w in wordList:
     soup = BeautifulSoup(page.content, "html.parser")
 
     definitions = grabDefinitions()
-    # kanji = splitter.extract_unicode_block(kanji, w)
+    split_kanji = splitter.extract_unicode_block(kanji, w)
     POS = grabPOS()
     reading = grabReading()
     examples = grabExamples()
