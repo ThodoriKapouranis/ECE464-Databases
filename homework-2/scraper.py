@@ -17,8 +17,8 @@ ascii_char = r'[ -~]'
 ENG_URL = "https://ejje.weblio.jp/content/"
 SENTENCE_URL = "https://ejje.weblio.jp/sentence/content/"
 word = "ブンデスリーガ" 
-# wordList = words.getWords(10)
-wordList = ['景気']
+wordList = words.getWords(100)
+# wordList = ['世間']
 count = 0
 
 # This website gets its information from multiple dictionaries
@@ -109,7 +109,7 @@ def grabDefinitions():
 
     elif (def_class == "Kejje"):
         # Grab all the definitions from this container
-        def_container = def_container.findAll("div", class_="lvlBje")
+        def_container = def_container.findAll("div", class_="level0")
 
         for i in range(def_container.__len__()):
             # Grab all the example sentences 
