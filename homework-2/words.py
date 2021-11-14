@@ -1,12 +1,12 @@
 
-def getWords(count):
+def getWords(lim):
     words = []
     f = open('jp-corpus.txt', 'r', encoding="utf8")
     lines = f.readlines()
+    count = 0
 
-    lim = count
     for w in lines:
-        if (lim>count):
+        if (count > lim):
             break;
         words.append(w[:-1])
         count += 1

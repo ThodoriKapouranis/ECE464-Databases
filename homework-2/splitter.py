@@ -39,4 +39,6 @@ def remove_unicode_block(unicode_block, string):
 	return re.sub( unicode_block, '', string)
 
 
+# print( extract_unicode_block(kanji, "携帯") )
+
 ## EXAMPLES ## 

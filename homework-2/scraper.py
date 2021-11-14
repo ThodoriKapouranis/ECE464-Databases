@@ -18,10 +18,31 @@ ENG_URL = "https://ejje.weblio.jp/content/"
 SENTENCE_URL = "https://ejje.weblio.jp/sentence/content/"
 word = "ブンデスリーガ" 
 wordList = words.getWords(10)
+# wordList = ['形態']
 count = 0
+
 # This website gets its information from multiple dictionaries
 # These dictionaries give multiple definitions and are placed in containers
 # Below is some logic to try to find the container with the most definitions
+
+# Each argument here is a the entire HTML element, not just the text
+def definitionField(meaning, sentence, translation):
+    if (sentence == None or translation == None):
+        return (
+            {
+                "Meaning": meaning.text,
+            })
+    
+    else:
+        return (
+            {
+                "Meaning": meaning.text,
+                "Example": {
+                    "Sentence": sentence.text,
+                    "Translation": translation.text,
+                } 
+            })
+
 def grabDefinitions():
     definitions = []
     defs = []
@@ -30,17 +51,16 @@ def grabDefinitions():
     def_container = None
     def_class = "content-explanation je"
 
+    # Count all definition blocks... This website uses 3 different sources
+    # Kejje class can come in two different layouts, Kejje1 and Kejje2
     for i in soup.find_all(class_="Kejje"):
-        defs.append(i)
-        len = i.find_all(class_="level0").__len__()
         
+        len = i.find_all(class_="level0").__len__()
         if (len == 0):
-            # For some reason, the website decides its a good idea
-            # to seemingly randomly change how it represents definitions
-            # , even if theyre from the same source...
-            len = i.find_all(class_="level1").__len__()
-            defs_classes.append("Kejje2") 
+
+            continue
         else:
+            defs.append(i)
             defs_classes.append("Kejje")
 
         defs_lens.append(len)
@@ -55,17 +75,27 @@ def grabDefinitions():
         defs_lens.append(i.find_all(class_="jmdctGls").__len__()) 
         defs_classes.append("hlt_JMDCT")
 
+    print( defs_classes, defs_lens )
+
+    # if there are >0 definition blocks, pick the one with the most definitions
     if (defs_lens != [] ):
         best_index = defs_lens.index( max(defs_lens) )
         best_len = defs_lens[best_index]
+        # Rigorous testing to ensure that a block with 0 definitions did not win
         def_container = defs[best_index] if best_len>0 else None
         def_class = defs_classes[best_index] if best_len>0 else "content-explanation je"
-    print(defs_classes)
-    print(defs_lens)
-    print(def_class)
+
     # If neither block exists, use the default "content-explanation je" block
     if (def_class == "content-explanation je"):
+        
         def_container = soup.find("td", class_="content-explanation je")
+        
+        # In the rare case that a word is not defined anywhere, return None.
+        # In main loop we will check if definitions == None, in that case
+        # we will skip the word entirely and move on to the next word.
+        if (def_container == None):
+            return None
+
         for str in def_container.text.split('、'):
             definitions.append({"Meaning:": str })
 
@@ -83,19 +113,13 @@ def grabDefinitions():
                 sentence_jp = def_container[i].findNext(class_="KejjeYrJp")
                 sentence_eng = def_container[i].findNext(class_="KejjeYrEn")
 
-
             # sentences may not exist. Only append to definitions if they exist
-            if ( sentence_jp != None and sentence_eng != None ):
-                definitions.append({
-                    "Meaning": def_container[i].text,
-                    "Example": {
-                        "Sentence": sentence_jp.text,
-                        "Translation": sentence_eng.text,
-                    } 
-                })
-            else: 
-                definitions.append({"Definition": def_container[i].text})
-
+            definitions.append( definitionField(
+                def_container[i], 
+                sentence_jp, 
+                sentence_eng)
+            )
+            
     elif (def_class == "Nwnej"):
         def_container = def_container.findAll("div", class_="nwnejT")
         
@@ -109,17 +133,23 @@ def grabDefinitions():
             ):
                 sentence_jp = None
 
-            # sentences may not exist. Only append to definitions if they exist
-            if ( sentence_jp != None and sentence_eng != None ):
-                definitions.append({
-                    "Meaning": def_container[i].text,
-                    "Example": {
-                        "Sentence": sentence_jp.text,
-                        "Translation": sentence_eng.text,
-                    } 
-                })
-            else: 
-                definitions.append({"Definition": def_container[i].text})
+            definitions.append( definitionField(
+                def_container[i], 
+                sentence_jp, 
+                sentence_eng)
+            )
+
+    elif (def_class == "hlt_JMDCT"):
+        def_container = def_container.find_all("div", class_="jmdctGls")
+
+        for i in range(def_container.__len__()):
+            def_and_synonyms = def_container[i]\
+                .findNext("tr").findNext("tr")\
+                .findNext("td").findNext("td")
+
+            definitions.append( 
+                definitionField(def_and_synonyms, None, None))
+
     
     return definitions
 
@@ -147,11 +177,14 @@ def grabPOS():
 
 def grabExamples():
     example_sens = []
-    examples = soup.find_all(class_="qotC")
+    examples = soup.find_all('div', class_="qotC")
+    
+    if (examples==None):
+        return None
 
     for i in range(examples.__len__()):
-        sentence_jp = examples[i].find(class_='qotCJJ')
-        sentence_eng = examples[i].find(class_='qotCJE')
+        sentence_jp = examples[i].find('p', class_='qotCJJ')
+        sentence_eng = examples[i].find('p', class_='qotCJE')
         
         # Clean up extraction
         for child in sentence_jp.find_all(class_="addToSlBtnCntner"):
@@ -165,7 +198,7 @@ def grabExamples():
             'Translation': sentence_eng.text
         })
 
-        return example_sens
+    return example_sens
 
 for w in wordList:
     print(count)
@@ -181,10 +214,17 @@ for w in wordList:
     reading = grabReading()
     examples = grabExamples()
 
+    # Dont bother adding anything if there is no definition to it
+    if (definitions == None):
+        continue
+    elif (definitions == []):
+        print("WTF?\nWTF?\nWTF?\nWTF?\nWTF?\nWTF?\nWTF?\nWTF?\nWTF?\nWTF?\n")
 
-# print( 'Word:', word )
-# print( "POS:", POS )
-# print( 'Kanji:', splitter.extract_unicode_block(kanji, word) )
-# print( 'Reading:', reading )
-# pprint.pprint( definitions )
-# pprint.pprint( examples_sen )
+    print( '\n\n Word:', w )
+    print( "POS:", POS )
+    print( 'Kanji:', splitter.extract_unicode_block(kanji, w) )
+    print( 'Reading:', reading )
+    pprint.pprint( definitions )
+    
+    # if (examples != None):
+    #     pprint.pprint( examples )
