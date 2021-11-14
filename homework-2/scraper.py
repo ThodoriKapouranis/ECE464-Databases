@@ -17,8 +17,8 @@ ascii_char = r'[ -~]'
 ENG_URL = "https://ejje.weblio.jp/content/"
 SENTENCE_URL = "https://ejje.weblio.jp/sentence/content/"
 word = "ブンデスリーガ" 
-wordList = words.getWords(100)
-# wordList = ['世間']
+# wordList = words.getWords(100)
+wordList = ['M']
 count = 0
 
 # This website gets its information from multiple dictionaries
@@ -186,7 +186,7 @@ def grabReading():
         if (reading==None):
             reading = ""
         else:
-            reading = reading.findNext("a").findNext("a")
+            reading = reading.findNext("a").findNext("a").text
     
     return reading
 
@@ -203,19 +203,28 @@ def grabExamples():
         return None
 
     for i in range(examples.__len__()):
-        sentence_jp = examples[i].find('p', class_='qotCJJ')
-        sentence_eng = examples[i].find('p', class_='qotCJE')
+        # JP --> ENG 
+        source = examples[i].find('p', class_='qotCJJ')
+        target = examples[i].find('p', class_='qotCJE')
+
+        # ENG --> JP
+        if (source == None):
+            target = examples[i].find('p', class_='qotCJ')
+            source = examples[i].find('p', class_='qotCE')
+
+        if(source==None or target==None):
+            continue
         
         # Clean up extraction
-        for child in sentence_jp.find_all(class_="addToSlBtnCntner"):
+        for child in source.find_all(class_=["addToSlBtnCntner", "squareCircle", "fa"]):
             child.decompose()
 
-        for child in sentence_eng.find_all(["b", "i", "span"]):
+        for child in target.find_all(["b", "i", "span"]):
             child.decompose()
 
         example_sens.append({
-            'Sentence': sentence_jp.text, 
-            'Translation': sentence_eng.text
+            'Sentence': source.text, 
+            'Translation': target.text
         })
 
     return example_sens
@@ -246,5 +255,5 @@ for w in wordList:
     print( 'Reading:', reading )
     pprint.pprint( definitions )
     
-    # if (examples != None):
-    #     pprint.pprint( examples )
+    if (examples != None):
+        pprint.pprint( examples )
