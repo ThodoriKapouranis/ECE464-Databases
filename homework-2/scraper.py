@@ -17,8 +17,8 @@ ascii_char = r'[ -~]'
 ENG_URL = "https://ejje.weblio.jp/content/"
 SENTENCE_URL = "https://ejje.weblio.jp/sentence/content/"
 word = "ブンデスリーガ" 
-wordList = words.getWords(10)
-# wordList = ['形態']
+# wordList = words.getWords(10)
+wordList = ['景気']
 count = 0
 
 # This website gets its information from multiple dictionaries
@@ -51,7 +51,7 @@ def grabDefinitions():
     def_container = None
     def_class = "content-explanation je"
 
-    # Count all definition blocks... This website uses 3 different sources
+    # Count all definition blocks... This website uses 4 different sources
     # Kejje class can come in two different layouts, Kejje1 and Kejje2
     for i in soup.find_all(class_="Kejje"):
         
@@ -75,13 +75,21 @@ def grabDefinitions():
         defs_lens.append(i.find_all(class_="jmdctGls").__len__()) 
         defs_classes.append("hlt_JMDCT")
 
+    for i in soup.find_all(class_="Stwdj"):
+        defs.append(i)
+        # Definition container class : "stwdjNB"
+        defs_lens.append( i.find_all(class_="stwdjNB").__len__() ) 
+        defs_classes.append("Stwdj")
+    
     print( defs_classes, defs_lens )
 
     # if there are >0 definition blocks, pick the one with the most definitions
     if (defs_lens != [] ):
         best_index = defs_lens.index( max(defs_lens) )
         best_len = defs_lens[best_index]
-        # Rigorous testing to ensure that a block with 0 definitions did not win
+
+        # We will now set the container we are looking at to the 
+        # dictionary block that contains the most definitions
         def_container = defs[best_index] if best_len>0 else None
         def_class = defs_classes[best_index] if best_len>0 else "content-explanation je"
 
@@ -150,7 +158,19 @@ def grabDefinitions():
             definitions.append( 
                 definitionField(def_and_synonyms, None, None))
 
-    
+    elif (def_class == "Stwdj"):
+        def_container = def_container.find_all("p", class_="stwdjNB")
+
+        for i in range(def_container.__len__()):
+            sentence_jp = def_container[i].find_next(class_="stwdjYrJp")
+            sentence_eng = def_container[i].find_next(class_="stwdjYrEn")
+
+            definitions.append( definitionField(
+                def_container[i],
+                sentence_jp,
+                sentence_eng
+            ))
+
     return definitions
 
 # Some pages do not have reading on top of the words for some reason
