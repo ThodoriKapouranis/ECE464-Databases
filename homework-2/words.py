@@ -1,4 +1,3 @@
-
 def getWords(lim):
     words = []
     f = open('jp-corpus.txt', 'r', encoding="utf8")
