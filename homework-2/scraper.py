@@ -2,8 +2,10 @@ import requests
 from bs4 import BeautifulSoup
 import splitter
 import words
-import pprint
+from pprint import pprint
+from pymongo import MongoClient
 
+# Regex expression to split japanese words
 hiragana_full = r'[ぁ-ゟ]'
 katakana_full = r'[゠-ヿ]'
 kanji = r'[㐀-䶵一-鿋豈-頻]'
@@ -14,12 +16,25 @@ symbols_punct = r'[、-〿]'
 misc_symbols = r'[ㇰ-ㇿ㈠-㉃㊀-㋾㌀-㍿]'
 ascii_char = r'[ -~]'
 
+valid_POS = {
+    "名詞": True,
+    "固有名詞": True,
+    "形式名詞": True,
+    "動詞": True,
+    "助動詞": True,
+    "複合動詞": True,
+    "形容動詞": True,
+    "連体詞": True,
+    "前置詞": True,
+    "助数詞": True,
+    "否定": True,
+    "敬語": True,
+    "副助詞": True,
+}
+
 ENG_URL = "https://ejje.weblio.jp/content/"
-SENTENCE_URL = "https://ejje.weblio.jp/sentence/content/"
-word = "ブンデスリーガ" 
-# wordList = words.getWords(100)
-wordList = ['M']
-count = 0
+# word = "ブンデスリーガ" 
+# wordList = ['M']
 
 # This website gets its information from multiple dictionaries
 # These dictionaries give multiple definitions and are placed in containers
@@ -191,9 +206,22 @@ def grabReading():
     return reading
 
 def grabPOS():
-    POS = soup.find(class_="stwdjS")
-    POS = POS.text if POS!=None else ""
-    return POS
+    POS_list = []
+    POS_containers = soup.findAll(class_="jmdctT")
+    if(POS_containers == None):
+        print("NO POS CONTAINERS!!!")
+
+    for container in POS_containers:
+        container = container.findNext("td")
+        for POS in container.findChildren("a"):
+
+            if(POS==None):
+                print("WTF??")
+
+            if POS.text in valid_POS:
+                POS_list.append(POS.text)
+
+    return POS_list
 
 def grabExamples():
     example_sens = []
@@ -229,31 +257,57 @@ def grabExamples():
 
     return example_sens
 
-for w in wordList:
-    print(count)
-    print(w)
-    count+=1
+if __name__ == "__main__":
+    wordList = words.getWords(1000)
+    # wordList = ["基地"]
+    count = 0
+    client = MongoClient("mongodb+srv://root:123@cluster0.nubhe.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
+    db = client.hw2
 
-    page = requests.get( ENG_URL + w )
-    soup = BeautifulSoup(page.content, "html.parser")
 
-    definitions = grabDefinitions()
-    split_kanji = splitter.extract_unicode_block(kanji, w)
-    POS = grabPOS()
-    reading = grabReading()
-    examples = grabExamples()
+    for w in wordList:
+        print(count)
+        print(w)
+        count+=1
 
-    # Dont bother adding anything if there is no definition to it
-    if (definitions == None):
-        continue
-    elif (definitions == []):
-        print("WTF?\nWTF?\nWTF?\nWTF?\nWTF?\nWTF?\nWTF?\nWTF?\nWTF?\nWTF?\n")
+        page = requests.get( ENG_URL + w )
+        soup = BeautifulSoup(page.content, "html.parser")
 
-    print( '\n\n Word:', w )
-    print( "POS:", POS )
-    print( 'Kanji:', splitter.extract_unicode_block(kanji, w) )
-    print( 'Reading:', reading )
-    pprint.pprint( definitions )
-    
-    if (examples != None):
-        pprint.pprint( examples )
+        definitions = grabDefinitions()
+        # If no definitions are found, go to next word.
+        if (definitions == None) : 
+            continue
+
+        split_kanji = splitter.extract_unicode_block(kanji, w)
+        POS = grabPOS()
+        reading = grabReading()
+        examples = grabExamples()
+
+        entry = {}
+        entry['word'] = w
+        if (POS!=None): entry['pos'] = POS
+        if (reading!=None): entry["reading"] = reading
+        if (split_kanji != []): entry["kanji"] = split_kanji
+        if (definitions != None): 
+            entry["definitions"] = definitions
+        if (examples != None): entry["examples"] = examples
+        
+        result = db.dictionary.insert_one(entry)
+        # pprint(result)
+        
+
+
+        # if (definitions == None):
+        #     continue
+        # elif (definitions == []):
+        #     print("WTF?\nWTF?\nWTF?\nWTF?\nWTF?\nWTF?\nWTF?\nWTF?\nWTF?\nWTF?\n")
+
+        # print( '\nWord:', w )
+        # print( "POS:", POS )
+        # print( 'Kanji:', splitter.extract_unicode_block(kanji, w) )
+        # print( 'Reading:', reading )
+
+        # pprint( definitions )
+        
+        # if (examples != None):
+        #     pprint( examples )
