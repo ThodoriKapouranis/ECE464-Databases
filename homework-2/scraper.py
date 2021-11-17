@@ -261,7 +261,7 @@ if __name__ == "__main__":
     wordList = words.getWords(1000)
     # wordList = ["基地"]
     count = 0
-    client = MongoClient("mongodb+srv://root:123@cluster0.nubhe.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
+    client = MongoClient( #dasdfasdfasdfasdf# )
     db = client.hw2
 
 
